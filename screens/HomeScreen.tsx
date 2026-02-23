@@ -5,7 +5,7 @@ import FloorPlanSVG from '../components/FloorPlanSVG';
 import FurniturePanel from '../components/FurniturePanel';
 
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const GRID_UNIT = 19.2;    // 80% of 24
 const SVG_WIDTH = 384;     // 80% of 480
