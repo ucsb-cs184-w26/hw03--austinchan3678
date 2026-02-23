@@ -34,18 +34,25 @@ const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
         { dx: pan.x, dy: pan.y },
       ], { useNativeDriver: false }),
       onPanResponderRelease: (e, gesture) => {
-        pan.flattenOffset();
-        // Calculate new position based on gestureState and last offset
-        const x = last.x + gesture.dx;
-        const y = last.y + gesture.dy;
-        const nx = Math.round(x / (GRID_UNIT / 2)) / 2;
-        const ny = Math.round(y / (GRID_UNIT / 2)) / 2;
-        onMove?.(item.key, nx, ny);
-        last.x = nx * GRID_UNIT;
-        last.y = ny * GRID_UNIT;
-        pan.setValue({ x: 0, y: 0 });
-        pan.setOffset({ x: last.x, y: last.y });
-      },
+  pan.flattenOffset();
+  
+  // Convert pixels back to Grid Units accurately
+  const finalX = last.x + gesture.dx;
+  const finalY = last.y + gesture.dy;
+  
+  // Snap to the 0.5 grid
+  const nx = Math.round(finalX / (GRID_UNIT / 2)) / 2;
+  const ny = Math.round(finalY / (GRID_UNIT / 2)) / 2;
+
+  // This triggers the handleMove in HomeScreen
+  onMove?.(item.key, nx, ny);
+  
+  // Reset for next drag
+  last.x = nx * GRID_UNIT;
+  last.y = ny * GRID_UNIT;
+  pan.setValue({ x: 0, y: 0 });
+  pan.setOffset({ x: last.x, y: last.y });
+},
       onPanResponderTerminationRequest: () => true,
       onShouldBlockNativeResponder: () => false,
     })

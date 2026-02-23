@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { View, ActivityIndicator, Button, Text, TouchableOpacity, Alert } from 'react-native';
 import DraggableFurniture from '../components/DraggableFurniture';
 import FloorPlanSVG from '../components/FloorPlanSVG';
@@ -14,12 +14,10 @@ const SVG_HEIGHT = 268.8;  // 80% of 336
 const HomeScreen = () => { 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedFurniture, setSelectedFurniture] = useState(null);
   const [placed, setPlaced] = useState([]);
   const [selectedKey, setSelectedKey] = useState(null);
-  const [statusMessage, setStatusMessage] = useState("Place furniture on the map"); // Dynamic message
+  const [statusMessage, setStatusMessage] = useState("Drag furniture to the map");
   const svgContainerRef = useRef(null);
-  const [svgLayout, setSvgLayout] = useState({ x: 0, y: 0, width: SVG_WIDTH, height: SVG_HEIGHT });
 
   useEffect(() => {
     (async () => {
@@ -33,152 +31,149 @@ const HomeScreen = () => {
     })();
   }, []);
 
-  const loadNewFloorPlan = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
-      if (!result.canceled) {
-        const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
-        setData(JSON.parse(content));
-        setPlaced([]); 
-        setStatusMessage("New floor plan loaded");
-      }
-    } catch (err) {
-      Alert.alert("Error", "Failed to load floor plan file.");
-    }
-  };
-
-  const isValidPosition = (nx: number, ny: number, itemW: number, itemH: number, currentKey: string | null) => {
-    // 1. Check Floor Boundaries
-    if (nx < 0 || ny < 0 || nx + itemW > 20 || ny + itemH > 14) {
-      setStatusMessage("Error: Out of floor boundaries");
-      return false;
-    }
-
-    // 2. Collision with Other Furniture (AABB)
-    const furnitureCollision = placed.some(other => {
-      if (other.key === currentKey) return false;
-      return (
-        nx < other.x + other.w &&
-        nx + itemW > other.x &&
-        ny < other.y + other.h &&
-        ny + itemH > other.y
-      );
-    });
-    if (furnitureCollision) {
-      setStatusMessage("Error: Colliding with other furniture");
-      return false;
-    }
-
-    const roomsArray = data?.floorPlan?.rooms?.room || [];
-
-    // 3. Doorway Protection
-    const doorwayRadius = 1.2; 
-    const isInDoorway = roomsArray.some(room => {
-      const pos = room.position['@attributes'];
+  // DOORWAY LOGIC: Automatically generate door centers between adjacent rooms
+  const doors = useMemo(() => {
+    const doorPoints = [];
+    const rooms = data?.floorPlan?.rooms?.room || [];
+    
+    rooms.forEach(room => {
+      const r1 = room.position['@attributes'];
       const adjacents = Array.isArray(room.adjacentTo) ? room.adjacentTo : [room.adjacentTo];
       
-      return adjacents.some(adjId => {
-        const adjRoom = roomsArray.find(r => r['@attributes'].id === adjId);
-        if (!adjRoom) return false;
-        const adjPos = adjRoom.position['@attributes'];
-        
-        const doorX = (parseFloat(pos.x) + parseFloat(pos.width)/2 + parseFloat(adjPos.x) + parseFloat(adjPos.width)/2) / 2;
-        const doorY = (parseFloat(pos.y) + parseFloat(pos.height)/2 + parseFloat(adjPos.y) + parseFloat(adjPos.height)/2) / 2;
-        
-        const dist = Math.sqrt(Math.pow(nx + itemW/2 - doorX, 2) + Math.pow(ny + itemH/2 - doorY, 2));
-        return dist < doorwayRadius;
+      adjacents.forEach(adjId => {
+        const adjRoom = rooms.find(r => r['@attributes'].id === adjId);
+        if (!adjRoom) return;
+        const r2 = adjRoom.position['@attributes'];
+
+        const x1 = parseFloat(r1.x), y1 = parseFloat(r1.y), w1 = parseFloat(r1.width), h1 = parseFloat(r1.height);
+        const x2 = parseFloat(r2.x), y2 = parseFloat(r2.y), w2 = parseFloat(r2.width), h2 = parseFloat(r2.height);
+
+        let doorPos = null;
+        if (x1 + w1 === x2) { // R1 is Left of R2
+          const yStart = Math.max(y1, y2);
+          const yEnd = Math.min(y1 + h1, y2 + h2);
+          doorPos = { x: x2, y: (yStart + yEnd) / 2 };
+        } else if (y1 + h1 === y2) { // R1 is Top of R2
+          const xStart = Math.max(x1, x2);
+          const xEnd = Math.min(x1 + w1, x2 + w2);
+          doorPos = { x: (xStart + xEnd) / 2, y: y2 };
+        }
+
+        if (doorPos && !doorPoints.find(d => d.x === doorPos.x && d.y === doorPos.y)) {
+          doorPoints.push(doorPos);
+        }
       });
     });
-    if (isInDoorway) {
-      setStatusMessage("Error: Cannot place in doorway");
+    return doorPoints;
+  }, [data]);
+
+  const isValidPosition = (nx, ny, itemW, itemH, currentKey) => {
+    // 1. Boundary Check
+    if (nx < 0 || ny < 0 || nx + itemW > 20 || ny + itemH > 14) {
+      setStatusMessage("Error: Out of bounds");
       return false;
     }
 
-    // 4. Wall Collision (Must be fully inside a room)
-    const isInsideAnyRoom = roomsArray.some(room => {
-      const rPos = room.position['@attributes'];
-      const rx = parseFloat(rPos.x);
-      const ry = parseFloat(rPos.y);
-      const rw = parseFloat(rPos.width);
-      const rh = parseFloat(rPos.height);
+    // 2. Furniture-on-Furniture Collision (AABB)
+    const collision = placed.some(other => {
+      if (other.key === currentKey) return false;
+      return nx < other.x + other.w && nx + itemW > other.x && ny < other.y + other.h && ny + itemH > other.y;
+    });
+    if (collision) {
+      setStatusMessage("Error: Furniture collision");
+      return false;
+    }
 
-      return (
-        nx >= rx &&
-        ny >= ry &&
-        nx + itemW <= rx + rw &&
-        ny + itemH <= ry + rh
-      );
+    // 3. Wall Collision (Must be fully inside a room)
+    const roomsArray = data?.floorPlan?.rooms?.room || [];
+    const isInsideRoom = roomsArray.some(room => {
+      const p = room.position['@attributes'];
+      const rx = parseFloat(p.x), ry = parseFloat(p.y), rw = parseFloat(p.width), rh = parseFloat(p.height);
+      return nx >= rx && ny >= ry && nx + itemW <= rx + rw && ny + itemH <= ry + rh;
+    });
+    if (!isInsideRoom) {
+      setStatusMessage("Error: Wall collision");
+      return false;
+    }
+
+    // 4. IMPROVED: Doorway Sphere Collision (Circle vs Rectangle)
+    const doorRadius = 1.0; 
+    const nearDoor = doors.some(door => {
+      // Find the closest point on the furniture rectangle to the door center
+      const closestX = Math.max(nx, Math.min(door.x, nx + itemW));
+      const closestY = Math.max(ny, Math.min(door.y, ny + itemH));
+
+      // Calculate distance from door center to this closest point
+      const dx = door.x - closestX;
+      const dy = door.y - closestY;
+      const distanceSquared = (dx * dx) + (dy * dy);
+      
+      return distanceSquared < (doorRadius * doorRadius);
     });
 
-    if (!isInsideAnyRoom) {
-      setStatusMessage("Error: Cannot place inside walls");
+    if (nearDoor) {
+      setStatusMessage("Error: Doorway blocked");
       return false;
     }
 
-    setStatusMessage("Placement successful");
+    setStatusMessage("Placement valid");
     return true;
   };
 
-// Modified Move handler: Deletes the item if the move results in an error
   const handleMove = (key, nx, ny) => {
     const item = placed.find(p => p.key === key);
     if (!item) return;
 
-    // Check if the new position is valid
     if (isValidPosition(nx, ny, item.w, item.h, key)) {
-      // Valid: Update the position
       setPlaced(prev => prev.map(p => p.key === key ? { ...p, x: nx, y: ny } : p));
-      setStatusMessage("Item moved");
     } else {
-      // INVALID: Remove the item from the map entirely
-      setPlaced(prev => prev.filter(p => p.key !== key));
-      
-      // Update the message to explain why it was deleted
-      const errorDetail = statusMessage.startsWith("Error") ? statusMessage : "Collision detected";
-      setStatusMessage(`${errorDetail} - Item Deleted`);
+      // FORCE DELETE: If isValidPosition returned false, remove it from the array
+      setPlaced(prev => {
+        const filtered = prev.filter(p => p.key !== key);
+        console.log("Collision detected! Deleted item:", key); // Debug log
+        return filtered;
+      });
+      Alert.alert("Collision!", `${statusMessage}. The item has been removed.`);
     }
   };
 
-  // Modified Add handler: Cancels placement if the starting spot is blocked
   function handleAddFurniture(item) {
-    // If the default 1,1 spot is blocked, we just don't add it
     if (isValidPosition(1, 1, item.w, item.h, null)) {
       setPlaced(prev => [...prev, { ...item, x: 1, y: 1, key: `${item.id}-${Date.now()}` }]);
-      setStatusMessage("Item added at (1,1)");
     } else {
-      // If blocked, no item is added (effectively deleted/cancelled)
-      setStatusMessage("Error: Start position blocked. Item not added.");
-      Alert.alert("Placement Blocked", "The starting area (top-left) is occupied or invalid.");
+      Alert.alert("Blocked", "Entrance (1,1) is blocked.");
     }
   }
 
-  const handleClearAll = () => {
-    setPlaced([]);
-    setStatusMessage("Map cleared");
+  const loadNewFloorPlan = async () => {
+    const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
+    if (!result.canceled) {
+      const content = await FileSystem.readAsStringAsync(result.assets[0].uri);
+      setData(JSON.parse(content));
+      setPlaced([]);
+    }
   };
+
   return loading ? (
     <ActivityIndicator />
   ) : (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 100, zIndex: 100 }} pointerEvents="box-none">
-        <FurniturePanel selectedId={selectedFurniture?.id} onAddFurniture={handleAddFurniture} />
+      <View style={{ position: 'absolute', width: 100, height: '100%', zIndex: 100 }} pointerEvents="box-none">
+        <FurniturePanel onAddFurniture={handleAddFurniture} />
       </View>
 
       <View style={{ flex: 1, marginLeft: 100 }}>     
-        <View style={{ paddingTop: 24, paddingLeft: 60, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 40 }}>
+        <View style={{ paddingTop: 24, paddingLeft: 60, flexDirection: 'row', justifyContent: 'space-between', paddingRight: 40 }}>
           <View>
-            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#222', marginBottom: 2 }}>Floor Plan</Text>
-            {/* Dynamic Message Replacement */}
-            <Text style={{ fontSize: 15, color: statusMessage.startsWith('Error') ? '#ff5252' : '#666', marginBottom: 8 }}>
-              {statusMessage}
-            </Text>
+            <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Floor Plan</Text>
+            <Text style={{ fontSize: 15, color: statusMessage.startsWith('Error') ? 'red' : '#666' }}>{statusMessage}</Text>
           </View>
           <Button title="Load JSON" onPress={loadNewFloorPlan} />
         </View>
 
-        <View style={{ flex: 1, marginRight: 40, marginTop: 12, alignItems: 'center' }}>
-          <View style={{ width: SVG_WIDTH, height: SVG_HEIGHT, position: 'relative' }} ref={svgContainerRef}>
-            <FloorPlanSVG width={SVG_WIDTH} height={SVG_HEIGHT} rooms={data?.floorPlan?.rooms?.room || []} />
+        <View style={{ flex: 1, alignItems: 'center', marginTop: 12 }}>
+          <View style={{ width: SVG_WIDTH, height: SVG_HEIGHT, position: 'relative' }}>
+            <FloorPlanSVG width={SVG_WIDTH} height={SVG_HEIGHT} rooms={data?.floorPlan?.rooms?.room || []} doors={doors} />
             {placed.map(item => (
               <DraggableFurniture key={item.key} item={item} onMove={handleMove} isSelected={selectedKey === item.key} onSelect={setSelectedKey} />
             ))}
@@ -186,8 +181,8 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      <TouchableOpacity onPress={handleClearAll} style={{ position: 'absolute', bottom: 32, right: 32, backgroundColor: '#ff5252', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 24, elevation: 4, zIndex: 200 }} activeOpacity={0.85}>
-        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Clear All</Text>
+      <TouchableOpacity onPress={() => setPlaced([])} style={{ position: 'absolute', bottom: 32, right: 32, backgroundColor: '#ff5252', borderRadius: 28, padding: 14 }}>
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>Clear All</Text>
       </TouchableOpacity>
     </View>
   );
