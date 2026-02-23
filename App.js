@@ -4,7 +4,7 @@ import HomeScreen from './screens/HomeScreen';
 
 export default function App() {
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+    <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'top', 'bottom']}>
       <HomeScreen />
     </SafeAreaView>
   );

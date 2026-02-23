@@ -1,10 +1,12 @@
 import React from 'react';
 import Svg, { Rect, Line } from 'react-native-svg';
 
-// FloorPlanSVG renders the grid and rooms using SVG
+// Keep these at the original 100% size! 
+// The viewBox handles the shrinking automatically.
 const GRID_SIZE = 20;
-const GRID_UNIT = 24; // px per unit
-
+const GRID_UNIT = 24; 
+const ORIGINAL_WIDTH = 480;
+const ORIGINAL_HEIGHT = 336;
 
 const FloorPlanSVG = ({ width = 480, height = 336, rooms = [], doors = [] }) => {
   // Draw grid lines
@@ -16,7 +18,7 @@ const FloorPlanSVG = ({ width = 480, height = 336, rooms = [], doors = [] }) => 
         x1={i * GRID_UNIT}
         y1={0}
         x2={i * GRID_UNIT}
-        y2={height}
+        y2={ORIGINAL_HEIGHT} // <--- FIX: Draw all the way down the 336px canvas
         stroke="#e0e0e0"
         strokeWidth={1}
       />
@@ -28,7 +30,7 @@ const FloorPlanSVG = ({ width = 480, height = 336, rooms = [], doors = [] }) => 
         key={`h-${j}`}
         x1={0}
         y1={j * GRID_UNIT}
-        x2={width}
+        x2={ORIGINAL_WIDTH} // <--- FIX: Draw all the way across the 480px canvas
         y2={j * GRID_UNIT}
         stroke="#e0e0e0"
         strokeWidth={1}
@@ -71,7 +73,11 @@ const FloorPlanSVG = ({ width = 480, height = 336, rooms = [], doors = [] }) => 
   });
 
   return (
-    <Svg width={width} height={height}>
+    <Svg 
+      width={width} 
+      height={height} 
+      viewBox="0 0 480 336" // Keeps the scaling proportional
+    >
       {/* Grid */}
       {gridLines}
       {/* Rooms */}

@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, ActivityIndicator, Button } from 'react-native';
+import { View, ActivityIndicator, Button, Text, TouchableOpacity } from 'react-native';
 import DraggableFurniture from '../components/DraggableFurniture';
 import FloorPlanSVG from '../components/FloorPlanSVG';
 import FurniturePanel from '../components/FurniturePanel';
 
-const GRID_UNIT = 24;
-const SVG_WIDTH = 480;
-const SVG_HEIGHT = 336;
+const GRID_UNIT = 19.2;    // 80% of 24
+const SVG_WIDTH = 384;     // 80% of 480
+const SVG_HEIGHT = 268.8;  // 80% of 336
 
 const HomeScreen = () => { 
   const [data, setData] = useState(null);
@@ -47,7 +47,6 @@ const HomeScreen = () => {
         ...item,
         x: 1,
         y: 1,
-
         key: `${item.id}-${Date.now()}`,
       },
     ]);
@@ -65,43 +64,73 @@ const HomeScreen = () => {
       >
         <FurniturePanel
           selectedId={selectedFurniture?.id}
-          disableScroll={false}
           onAddFurniture={handleAddFurniture}
         />
       </View>
 
       {/* Main floor plan area */}
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-        <View
-          style={{ width: SVG_WIDTH, height: SVG_HEIGHT, position: 'relative' }}
-          ref={svgContainerRef}
-          onLayout={e => {
-            const { x, y, width, height } = e.nativeEvent.layout;
-            setSvgLayout({ x, y, width, height });
-          }}
-        >
-          <FloorPlanSVG
-            width={SVG_WIDTH}
-            height={SVG_HEIGHT}
-            rooms={data?.floorPlan?.rooms?.room || []}
-          />
-          {/* Render placed furniture as draggable, rotatable, deletable */}
-          {placed.map(item => (
-            <DraggableFurniture
-              key={item.key}
-              item={item}
-              onMove={handleMove}
-
-              isSelected={selectedKey === item.key}
-              onSelect={setSelectedKey}
-            />
-          ))}
+      <View style={{ flex: 1, marginLeft: 100 }}>     
+        {/* 1. Title Area (Anchored to top left) */}
+        <View style={{ paddingTop: 24, paddingLeft: 60 }}>
+          <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#222', marginBottom: 2 }}>Floor Plan</Text>
+          <Text style={{ fontSize: 15, color: '#666', marginBottom: 8 }}>test</Text>
         </View>
-        <Button title="Clear All" onPress={handleClearAll} />
+
+        {/* 2. Map Area (Centered in all remaining space) */}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <View
+            style={{ width: SVG_WIDTH, height: SVG_HEIGHT, position: 'relative' }}
+            ref={svgContainerRef}
+            onLayout={e => {
+              const { x, y, width, height } = e.nativeEvent.layout;
+              setSvgLayout({ x, y, width, height });
+            }}
+          >
+            <FloorPlanSVG
+              width={SVG_WIDTH}
+              height={SVG_HEIGHT}
+              rooms={data?.floorPlan?.rooms?.room || []}
+            />
+            {/* Render placed furniture as draggable, rotatable, deletable */}
+            {placed.map(item => (
+              <DraggableFurniture
+                key={item.key}
+                item={item}
+                onMove={handleMove}
+                isSelected={selectedKey === item.key}
+                onSelect={setSelectedKey}
+              />
+            ))}
+          </View>
+          
+          
+        </View>
+
       </View>
 
-      {/* All drag/preview UI removed. Only click-to-add remains. */}
-    </View>
+    {/* Floating Clear All button in bottom right */}
+    <TouchableOpacity
+      onPress={handleClearAll}
+      style={{
+        position: 'absolute',
+        bottom: 32,
+        right: 32,
+        backgroundColor: '#ff5252',
+        borderRadius: 28,
+        paddingVertical: 14,
+        paddingHorizontal: 24,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        zIndex: 200,
+      }}
+      activeOpacity={0.85}
+    >
+      <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Clear All</Text>
+    </TouchableOpacity>
+  </View>
   );
 };
 

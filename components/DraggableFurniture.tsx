@@ -1,8 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View, PanResponder, Animated } from 'react-native';
 
-const GRID_UNIT = 24;
-
+const GRID_UNIT = 19.2;    // MUST exactly match HomeScreen!
 const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
   const pan = useRef(new Animated.ValueXY({ x: item.x * GRID_UNIT, y: item.y * GRID_UNIT })).current;
   const last = useRef({ x: item.x * GRID_UNIT, y: item.y * GRID_UNIT }).current;
