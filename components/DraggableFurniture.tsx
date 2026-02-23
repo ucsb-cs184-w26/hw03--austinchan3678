@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import { View, PanResponder, Animated } from 'react-native';
+import { View, PanResponder, Animated, Text } from 'react-native';
 
-const GRID_UNIT = 19.2;    // MUST exactly match HomeScreen!
+const GRID_UNIT = 19.2;    
+
 const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
   const pan = useRef(new Animated.ValueXY({ x: item.x * GRID_UNIT, y: item.y * GRID_UNIT })).current;
   const last = useRef({ x: item.x * GRID_UNIT, y: item.y * GRID_UNIT }).current;
@@ -22,9 +23,6 @@ const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
       onPanResponderGrant: (e, gesture) => {
         onSelect?.(item.key);
         const now = Date.now();
-        if (now - lastTap.current < 300) {
-
-        }
         lastTap.current = now;
         pan.setOffset({ x: last.x, y: last.y });
         pan.setValue({ x: 0, y: 0 });
@@ -34,25 +32,19 @@ const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
         { dx: pan.x, dy: pan.y },
       ], { useNativeDriver: false }),
       onPanResponderRelease: (e, gesture) => {
-  pan.flattenOffset();
-  
-  // Convert pixels back to Grid Units accurately
-  const finalX = last.x + gesture.dx;
-  const finalY = last.y + gesture.dy;
-  
-  // Snap to the 0.5 grid
-  const nx = Math.round(finalX / (GRID_UNIT / 2)) / 2;
-  const ny = Math.round(finalY / (GRID_UNIT / 2)) / 2;
+        pan.flattenOffset();
+        const finalX = last.x + gesture.dx;
+        const finalY = last.y + gesture.dy;
+        const nx = Math.round(finalX / (GRID_UNIT / 2)) / 2;
+        const ny = Math.round(finalY / (GRID_UNIT / 2)) / 2;
 
-  // This triggers the handleMove in HomeScreen
-  onMove?.(item.key, nx, ny);
-  
-  // Reset for next drag
-  last.x = nx * GRID_UNIT;
-  last.y = ny * GRID_UNIT;
-  pan.setValue({ x: 0, y: 0 });
-  pan.setOffset({ x: last.x, y: last.y });
-},
+        onMove?.(item.key, nx, ny);
+        
+        last.x = nx * GRID_UNIT;
+        last.y = ny * GRID_UNIT;
+        pan.setValue({ x: 0, y: 0 });
+        pan.setOffset({ x: last.x, y: last.y });
+      },
       onPanResponderTerminationRequest: () => true,
       onShouldBlockNativeResponder: () => false,
     })
@@ -77,9 +69,25 @@ const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
         transform: [
           { translateX: pan.x },
           { translateY: pan.y },
+          // ADD THIS LINE FOR ROTATION:
+          { rotate: `${item.rotation || 0}deg` } 
         ],
       }}
-    />
+    >
+      {/* Visual indicator for orientation */}
+      <Text style={{ fontSize: 8, fontWeight: 'bold', color: 'rgba(0,0,0,0.5)' }}>
+        {item.label}
+      </Text>
+      <View style={{ 
+        position: 'absolute', 
+        top: 0, 
+        width: '100%', 
+        height: 3, 
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderTopLeftRadius: 4,
+        borderTopRightRadius: 4
+      }} />
+    </Animated.View>
   );
 };
 
