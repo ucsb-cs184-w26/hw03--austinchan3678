@@ -1,0 +1,120 @@
+{
+  "floorPlan": {
+    "@attributes": {
+      "width": "20",
+      "height": "14"
+    },
+    "rooms": {
+      "room": [
+        {
+          "@attributes": {
+            "id": "living_room",
+            "type": "living"
+          },
+          "name": "Living Room",
+          "position": {
+            "@attributes": {
+              "x": "6",
+              "y": "0",
+              "width": "14",
+              "height": "6"
+            }
+          },
+          "adjacentTo": [
+            "kitchen",
+            "bedroom_2"
+          ]
+        },
+        {
+          "@attributes": {
+            "id": "kitchen",
+            "type": "kitchen"
+          },
+          "name": "Kitchen",
+          "position": {
+            "@attributes": {
+              "x": "0",
+              "y": "0",
+              "width": "6",
+              "height": "6"
+            }
+          },
+          "adjacentTo": [
+            "living_room",
+            "bedroom_1"
+          ]
+        },
+        {
+          "@attributes": {
+            "id": "bedroom_1",
+            "type": "bedroom"
+          },
+          "name": "BR1",
+          "position": {
+            "@attributes": {
+              "x": "0",
+              "y": "6",
+              "width": "8",
+              "height": "5"
+            }
+          },
+          "adjacentTo": [
+            "kitchen",
+            "bathroom_1"
+          ]
+        },
+        {
+          "@attributes": {
+            "id": "bathroom_1",
+            "type": "bathroom"
+          },
+          "name": "Bath1",
+          "position": {
+            "@attributes": {
+              "x": "0",
+              "y": "11",
+              "width": "8",
+              "height": "3"
+            }
+          },
+          "adjacentTo": "bedroom_1"
+        },
+        {
+          "@attributes": {
+            "id": "bedroom_2",
+            "type": "bedroom"
+          },
+          "name": "BR2",
+          "position": {
+            "@attributes": {
+              "x": "8",
+              "y": "6",
+              "width": "12",
+              "height": "5"
+            }
+          },
+          "adjacentTo": [
+            "living_room",
+            "bathroom_2"
+          ]
+        },
+        {
+          "@attributes": {
+            "id": "bathroom_2",
+            "type": "bathroom"
+          },
+          "name": "Bath2",
+          "position": {
+            "@attributes": {
+              "x": "8",
+              "y": "11",
+              "width": "12",
+              "height": "3"
+            }
+          },
+          "adjacentTo": "bedroom_2"
+        }
+      ]
+    }
+  }
+}
