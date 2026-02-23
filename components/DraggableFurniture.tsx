@@ -3,7 +3,7 @@ import { View, PanResponder, Animated } from 'react-native';
 
 const GRID_UNIT = 24;
 
-const DraggableFurniture = ({ item, onMove, onRotate, isSelected, onSelect }) => {
+const DraggableFurniture = ({ item, onMove, isSelected, onSelect }) => {
   const pan = useRef(new Animated.ValueXY({ x: item.x * GRID_UNIT, y: item.y * GRID_UNIT })).current;
   const last = useRef({ x: item.x * GRID_UNIT, y: item.y * GRID_UNIT }).current;
   const lastTap = useRef<number>(0);
@@ -15,7 +15,7 @@ const DraggableFurniture = ({ item, onMove, onRotate, isSelected, onSelect }) =>
     pan.setOffset({ x: px, y: py });
     last.x = px;
     last.y = py;
-  }, [item.x, item.y, item.rotated]);
+  }, [item.x, item.y]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -24,7 +24,7 @@ const DraggableFurniture = ({ item, onMove, onRotate, isSelected, onSelect }) =>
         onSelect?.(item.key);
         const now = Date.now();
         if (now - lastTap.current < 300) {
-          onRotate?.(item.key);
+
         }
         lastTap.current = now;
         pan.setOffset({ x: last.x, y: last.y });
@@ -59,8 +59,8 @@ const DraggableFurniture = ({ item, onMove, onRotate, isSelected, onSelect }) =>
         position: 'absolute',
         left: 0,
         top: 0,
-        width: item.rotated ? item.h * GRID_UNIT : item.w * GRID_UNIT,
-        height: item.rotated ? item.w * GRID_UNIT : item.h * GRID_UNIT,
+        width: item.w * GRID_UNIT,
+        height: item.h * GRID_UNIT,
         backgroundColor: item.color,
         borderRadius: 4,
         borderWidth: isSelected ? 2 : 1,

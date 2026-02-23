@@ -5,7 +5,7 @@ This is a simple React Native (Expo) app for designing floor plans by placing, m
 ## Features
 - Vertical left-side furniture panel
 - Click a furniture item to add it to the floor plan
-- Move and rotate furniture after placement
+- Move furniture after placement
 - Delete furniture
 - SVG-based grid and room rendering
 
@@ -28,7 +28,7 @@ This is a simple React Native (Expo) app for designing floor plans by placing, m
 
 ## Development Notes
 - All drag/ghost/preview logic has been removed for simplicity
-- Only click-to-add and move/rotate/delete are supported
+- Only click-to-add and move/delete are supported
 - Unused dependencies and components have been cleaned up
 
 ## License

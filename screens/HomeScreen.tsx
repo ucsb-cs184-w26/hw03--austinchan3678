@@ -29,12 +29,9 @@ const HomeScreen = () => {
     })();
   }, []);
 
-  // Move and rotate handlers
+  // Move handler
   const handleMove = (key, nx, ny) => {
     setPlaced(prev => prev.map(item => item.key === key ? { ...item, x: nx, y: ny } : item));
-  };
-  const handleRotate = (key) => {
-    setPlaced(prev => prev.map(item => item.key === key ? { ...item, rotated: !item.rotated } : item));
   };
 
   // Clear all furniture
@@ -50,7 +47,7 @@ const HomeScreen = () => {
         ...item,
         x: 1,
         y: 1,
-        rotated: false,
+
         key: `${item.id}-${Date.now()}`,
       },
     ]);
@@ -94,7 +91,7 @@ const HomeScreen = () => {
               key={item.key}
               item={item}
               onMove={handleMove}
-              onRotate={handleRotate}
+
               isSelected={selectedKey === item.key}
               onSelect={setSelectedKey}
             />
